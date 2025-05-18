@@ -68,7 +68,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert an image to colored ASCII art.")
     parser.add_argument("input_path", help="Input image file path")
     parser.add_argument("output_path", help="Output image file path")
-    parser.add_argument("-s", "--signature", default="@Retr0", help="Signature text to embed (default: @Retr0)")
+    parser.add_argument("-s", "--signature", default="@redactd", help="Signature text to embed (default: @redactd)")
     parser.add_argument("-f", "--font_size", type=int, default=12, help="Font size for output image (default: 12)")
     parser.add_argument("-p", "--font_path", default="font/DejaVuSansMono.ttf", help="Path to TTF font file (default: DejaVuSansMono.ttf)")
     parser.add_argument("-w", "--width", type=int, default=200, help="Width to resize image for ASCII (default: 200)")
