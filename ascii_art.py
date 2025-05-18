@@ -2,6 +2,7 @@
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
+import argparse
 
 # Extended ASCII character set based on brightness
 ASCII_CHARS = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. "[::-1]
@@ -17,7 +18,7 @@ def resize_image(image, new_width=200):  # Increased width for better detail
     return image.resize((new_width, new_height))
 
 def image_to_ascii_color(image, signature=None):
-    image = resize_image(image)
+    image = resize_image(image, new_width=args.width)
     image = image.convert("RGB")
     pixels = np.array(image)
 
@@ -63,14 +64,19 @@ def ascii_to_image(ascii_pixels, font_path="DejaVuSansMono.ttf", font_size=12, b
 
     return image
 
-# === MAIN ===
 if __name__ == "__main__":
-    input_path = "docs/er.jpeg"
-    output_path = "docs/ascii_art_output.png"
-    signature = "@Retr0"
+    parser = argparse.ArgumentParser(description="Convert an image to colored ASCII art.")
+    parser.add_argument("input_path", help="Input image file path")
+    parser.add_argument("output_path", help="Output image file path")
+    parser.add_argument("-s", "--signature", default="@Retr0", help="Signature text to embed (default: @Retr0)")
+    parser.add_argument("-f", "--font_size", type=int, default=12, help="Font size for output image (default: 12)")
+    parser.add_argument("-p", "--font_path", default="font/DejaVuSansMono.ttf", help="Path to TTF font file (default: DejaVuSansMono.ttf)")
+    parser.add_argument("-w", "--width", type=int, default=200, help="Width to resize image for ASCII (default: 200)")
 
-    img = Image.open(input_path)
-    ascii_pixels = image_to_ascii_color(img, signature=signature)
-    ascii_img = ascii_to_image(ascii_pixels, font_size=12)  # smaller font size for higher resolution
-    ascii_img.save(output_path)
-    print(f"✅ Saved ASCII art with embedded bottom-right signature: {output_path}")
+    args = parser.parse_args()
+
+    img = Image.open(args.input_path)
+    ascii_pixels = image_to_ascii_color(img, signature=args.signature)
+    ascii_img = ascii_to_image(ascii_pixels, font_path=args.font_path, font_size=args.font_size)
+    ascii_img.save(args.output_path)
+    print(f"✅ Saved ASCII art with embedded bottom-right signature: {args.output_path}")
