@@ -1,4 +1,4 @@
-# main.py
+# ascii_art.py
 
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
