@@ -8,8 +8,8 @@ import os
 # Japanese characters (dark to light)
 JAPANESE_CHARS = "鬱霊愛夢福嵐龍鳥魚星空花雪日月木水火土川山口目耳手足心人入大中小上下左右一二三四五六七八九十あいえうおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん"[::-1]
 
-def map_pixel_to_ascii(brightness, gamma=1.6):
-    adjusted = (brightness / 255) ** gamma
+def map_pixel_to_ascii(brightness, gamma=0.8):
+    adjusted = (brightness / 255)
     index = int(adjusted * (len(JAPANESE_CHARS) - 1))
     return JAPANESE_CHARS[index]
 
