@@ -1,96 +1,64 @@
 # ascii_art.py
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
-import numpy as np
+from PIL import Image
 import argparse
 import os
 
-# Japanese characters (dark to light)
-JAPANESE_CHARS = "鬱霊愛夢福嵐龍鳥魚星空花雪日月木水火土川山口目耳手足心人入大中小上下左右一二三四五六七八九十あいえうおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん"[::-1]
+# Official DB32 palette (32 colors)
+DB32 = [
+    (0, 0, 0), (34, 32, 52), (69, 40, 60), (102, 57, 49),
+    (143, 86, 59), (223, 113, 38), (217, 160, 102), (238, 195, 154),
+    (251, 242, 54), (153, 229, 80), (106, 190, 48), (55, 148, 110),
+    (75, 105, 47), (82, 75, 36), (50, 60, 57), (63, 63, 116),
+    (48, 96, 130), (91, 110, 225), (99, 155, 255), (95, 205, 228),
+    (203, 219, 252), (255, 255, 255), (155, 173, 183), (132, 126, 135),
+    (105, 106, 106), (89, 86, 82), (118, 66, 138), (172, 50, 50),
+    (217, 87, 99), (215, 123, 186), (143, 151, 74), (138, 111, 48)
+]
 
-def map_pixel_to_ascii(brightness, gamma=0.8):
-    adjusted = (brightness / 255)
-    index = int(adjusted * (len(JAPANESE_CHARS) - 1))
-    return JAPANESE_CHARS[index]
+def nearest_palette_color(rgb):
+    """Find the closest color in the restricted palette using Euclidean distance."""
+    r, g, b = rgb
+    return min(DB32, key=lambda c: (r - c[0])**2 + (g - c[1])**2 + (b - c[2])**2)
 
-def resize_image(image, new_width):
+def apply_palette_block_style(image, block_size):
+    """Apply solid color blocks over an image using the restricted palette."""
     width, height = image.size
-    aspect_ratio = height / width
-    new_height = int(aspect_ratio * new_width)
-    return image.resize((new_width, new_height), resample=Image.LANCZOS)
+    new_width = width // block_size
+    new_height = height // block_size
 
-def image_to_ascii_color(image, width, signature=None):
-    image = image.filter(ImageFilter.GaussianBlur(radius=1))
-    image = resize_image(image, new_width=width)
-    image = image.convert("RGB")
-    pixels = np.array(image)
+    # Resize for color sampling, then apply palette mapping
+    small_img = image.resize((new_width, new_height), Image.BILINEAR).convert("RGB")
+    output_img = Image.new("RGB", (width, height))
+    draw = output_img.load()
 
-    ascii_pixels = []
-    for row in pixels:
-        ascii_row = []
-        for r, g, b in row:
-            brightness = int(0.299 * r + 0.587 * g + 0.114 * b)
-            char = map_pixel_to_ascii(brightness)
-            ascii_row.append((char, (r, g, b)))
-        ascii_pixels.append(ascii_row)
+    for y in range(new_height):
+        for x in range(new_width):
+            original_color = small_img.getpixel((x, y))
+            palette_color = nearest_palette_color(original_color)
 
-    if signature:
-        last_row = ascii_pixels[-1]
-        row_len = len(last_row)
-        sig_len = min(len(signature), row_len)
-        start = row_len - sig_len
-        for i, c in enumerate(signature[-sig_len:]):
-            last_row[start + i] = (c, (255, 255, 255))
+            for dy in range(block_size):
+                for dx in range(block_size):
+                    px = x * block_size + dx
+                    py = y * block_size + dy
+                    if px < width and py < height:
+                        draw[px, py] = palette_color
 
-    return ascii_pixels, image
-
-def ascii_to_image(ascii_pixels, font_path, font_size, bg_color=(0, 0, 0)):
-    try:
-        font = ImageFont.truetype(font_path, font_size)
-    except IOError:
-        font = ImageFont.load_default()
-
-    # Use dummy draw to measure character size
-    dummy_img = Image.new("RGB", (100, 100))
-    dummy_draw = ImageDraw.Draw(dummy_img)
-
-    test_char = "あ"
-    bbox = dummy_draw.textbbox((0, 0), test_char, font=font)
-    char_width = bbox[2] - bbox[0]
-    char_height = bbox[3] - bbox[1]
-
-    img_width = int(len(ascii_pixels[0]) * char_width)
-    img_height = int(len(ascii_pixels) * char_height)
-
-    image = Image.new("RGB", (img_width, img_height), bg_color)
-    draw = ImageDraw.Draw(image)
-
-    for y, row in enumerate(ascii_pixels):
-        for x, (char, color) in enumerate(row):
-            draw.text((x * char_width, y * char_height), char, fill=color, font=font)
-
-    return image
-
+    return output_img
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="High-quality Japanese ASCII art generator.")
-    parser.add_argument("input_path", help="Input image file path")
-    parser.add_argument("output_path", help="Output image file path")
-    parser.add_argument("-s", "--signature", default="＠レダクト", help="Signature text")
-    parser.add_argument("-f", "--font_size", type=int, default=18, help="Font size (default: 18)")
-    parser.add_argument("-p", "--font_path", default="fonts/NotoSansMonoCJKjp-Regular.otf", help="Font path")
-    parser.add_argument("-w", "--width", type=int, default=200, help="ASCII width (default: 200)")
+    parser = argparse.ArgumentParser(description="Render image using a restricted 5-color palette with solid color blocks.")
+    parser.add_argument("input_path", help="Input image path")
+    parser.add_argument("output_path", help="Output image path (PNG recommended)")
+    parser.add_argument("-b", "--block_size", type=int, default=4, help="Block size (default: 4 pixels)")
 
     args = parser.parse_args()
 
     if not os.path.exists(args.input_path):
-        raise FileNotFoundError(f"Input file not found: {args.input_path}")
+        raise FileNotFoundError(f"❌ File not found: {args.input_path}")
 
-    img = Image.open(args.input_path)
+    original = Image.open(args.input_path).convert("RGB")
+    output = apply_palette_block_style(original, block_size=args.block_size)
+    output.save(args.output_path)
 
-    ascii_pixels, processed_img = image_to_ascii_color(img, width=args.width, signature=args.signature)
-
-    final_img = ascii_to_image(ascii_pixels, font_path=args.font_path, font_size=args.font_size)
-    final_img.save(args.output_path)
-
-    print(f"✅ Saved high-quality Japanese ASCII art to: {args.output_path}")
+    print(f"✅ Image saved with restricted palette to: {args.output_path}")
