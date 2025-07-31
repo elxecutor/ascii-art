@@ -1,4 +1,4 @@
-# pixel_art.py - Authentic DB32 Pixel Art Generator
+# ascii_art.py - Authentic DB32 Pixel Art Generator
 # Converts images to authentic pixel art using DB32 palette with proper downscaling
 
 from PIL import Image, ImageDraw
@@ -26,7 +26,7 @@ def downscale_for_pixel_art(image, max_size=128):
     """Downscale image to pixel art resolution with nearest-neighbor (no anti-aliasing)."""
     width, height = image.size
     
-    # Calculate new size keeping aspect ratio, max 128px on longer edge
+    # Calculate new size keeping aspect ratio, max max_size px on longer edge
     if width > height:
         if width > max_size:
             new_width = max_size
